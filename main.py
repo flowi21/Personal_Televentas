@@ -1,31 +1,57 @@
-import openai
 from flask import Flask, request, jsonify
+import requests
+import openai
+import os
 
-# Inicia Flask
 app = Flask(__name__)
 
-# Coloca aquí tu API Key de OpenAI
-openai.api_key = 'proj_wCWFSkDmDXxA8PeQtVvb93JN'
+# Configuración
+BITRIX24_WEBHOOK = "https://personal.bitrix24.es/rest/40/fs3anrt77zm1ktuv/"  # 🔹 Reemplazar con tu webhook de Bitrix24
+OPENAI_API_KEY = "proj_wCWFSkDmDXxA8PeQtVvb93JN"  # 🔹 Reemplazar con tu API Key de OpenAI
 
-# Definir el comportamiento del bot
-@app.route('/', methods=['POST'])
-def webhook():
-    # Obtener datos del mensaje desde Bitrix24
+openai.api_key = OPENAI_API_KEY
+
+# Endpoint para recibir mensajes de Bitrix24
+@app.route("/webhook", methods=["POST"])
+def bitrix_webhook():
     data = request.json
-    mensaje_cliente = data.get('data', {}).get('PARAMS', {}).get('MESSAGE', '')
     
-    # Realizar consulta a OpenAI para generar respuesta
-    response = openai.Completion.create(
-        engine="text-davinci-003",  # Puedes elegir el modelo de OpenAI que prefieras
-        prompt=mensaje_cliente,
-        max_tokens=150,
-        temperature=0.7
-    )
+    if not data or "data" not in data:
+        return jsonify({"error": "Datos inválidos"}), 400
     
-    # Responder con el texto generado por OpenAI
-    respuesta = response.choices[0].text.strip()
-    
-    return jsonify({"MESSAGE": respuesta})
+    # Extraer mensaje y usuario
+    message = data["data"].get("TEXT", "")
+    chat_id = data["data"].get("DIALOG_ID", "")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    if not message or not chat_id:
+        return jsonify({"error": "Faltan datos"}), 400
+
+    # Enviar mensaje a OpenAI
+    ai_response = get_ai_response(message)
+
+    # Enviar la respuesta de vuelta a Bitrix24
+    send_message_to_bitrix(chat_id, ai_response)
+
+    return jsonify({"status": "ok"}), 200
+
+# Función para obtener respuesta de OpenAI
+def get_ai_response(user_message):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",  
+        messages=[{"role": "user", "content": user_message}]
+    )
+    return response["choices"][0]["message"]["content"].strip()
+
+# Función para enviar mensaje a Bitrix24
+def send_message_to_bitrix(chat_id, message):
+    url = f"{BITRIX24_WEBHOOK}/im.message.add"
+    payload = {
+        "DIALOG_ID": chat_id,
+        "MESSAGE": message
+    }
+    requests.post(url, json=payload)
+
+# Ejecutar servidor en Render
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
