@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # Configuración
-BITRIX24_WEBHOOK = "https://personal.bitrix24.es/rest/40/fs3anrt77zm1ktuv/"  # 🔹 Reemplazar con tu webhook de Bitrix24
+BITRIX24_WEBHOOK = "https://personal.bitrix24.es/rest/40/oy1texfcn8pxcses/"  # 🔹 Reemplazar con tu webhook de Bitrix24
 OPENAI_API_KEY = "proj_wCWFSkDmDXxA8PeQtVvb93JN"  # 🔹 Reemplazar con tu API Key de OpenAI
 
 openai.api_key = OPENAI_API_KEY
@@ -54,4 +54,6 @@ def send_message_to_bitrix(chat_id, message):
 # Ejecutar servidor en Render
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+
 
